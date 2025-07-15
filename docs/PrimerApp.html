@@ -1,0 +1,338 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Primeros Pasos con App Inventor: Crea tu primera app</title>
+    <script src="https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        h1, h2 {
+            color: #0073e6;
+        }
+        .paso {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .paso1 { background-color: #E6F7FF; } /* Celeste muy claro */
+        .paso2 { background-color: #E8F5E9; } /* Verde menta muy claro */
+        .paso3 { background-color: #FCE4EC; } /* Rosa muy claro */
+        .paso4 { background-color: #FFFDE7; } /* Amarillo muy claro */
+        .paso5 { background-color: #F3E5F5; } /* Lavanda muy claro */
+        .paso6 { background-color: #FFEDE6; } /* Melocotón muy claro */
+        .paso-titulo {
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .paso1-titulo {
+            background-color: #B3E5FC; /* Celeste pastel */
+        }
+        .paso1-titulo:hover {
+            background-color: #81D4FA; /* Celeste más oscuro */
+        }
+        .paso2-titulo {
+            background-color: #C8E6C9; /* Verde menta pastel */
+        }
+        .paso2-titulo:hover {
+            background-color: #A5D6A7; /* Verde menta más oscuro */
+        }
+        .paso3-titulo {
+            background-color: #F8BBD0; /* Rosa pastel */
+        }
+        .paso3-titulo:hover {
+            background-color: #F48FB1; /* Rosa más oscuro */
+        }
+        .paso4-titulo {
+            background-color: #FFF9C4; /* Amarillo pastel */
+        }
+        .paso4-titulo:hover {
+            background-color: #FFF59D; /* Amarillo más oscuro */
+        }
+        .paso5-titulo {
+            background-color: #E1BEE7; /* Lavanda pastel */
+        }
+        .paso5-titulo:hover {
+            background-color: #CE93D8; /* Lavanda más oscuro */
+        }
+        .paso6-titulo {
+            background-color: #FFCCBC; /* Melocotón pastel */
+        }
+        .paso6-titulo:hover {
+            background-color: #FFAB91; /* Melocotón más oscuro */
+        }
+        .paso-contenido {
+            display: none;
+            padding: 10px;
+        }
+        .paso-contenido.active {
+            display: block;
+        }
+        .tema {
+            display: none;
+        }
+        .tema.active {
+            display: block;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+        }
+        button {
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 10px;
+            display: inline-block;
+        }
+        .boton-paso1 { background-color: #81D4FA; } /* Celeste más oscuro */
+        .boton-paso1:hover { background-color: #4FC3F7; } /* Celeste aún más oscuro */
+        .boton-paso2 { background-color: #A5D6A7; } /* Verde menta más oscuro */
+        .boton-paso2:hover { background-color: #81C784; } /* Verde menta aún más oscuro */
+        .boton-paso3 { background-color: #F48FB1; } /* Rosa más oscuro */
+        .boton-paso3:hover { background-color: #F06292; } /* Rosa aún más oscuro */
+        .boton-paso4 { background-color: #FFF59D; } /* Amarillo más oscuro */
+        .boton-paso4:hover { background-color: #FFEE58; } /* Amarillo aún más oscuro */
+        .boton-paso5 { background-color: #CE93D8; } /* Lavanda más oscuro */
+        .boton-paso5:hover { background-color: #BA68C8; } /* Lavanda aún más oscuro */
+        .boton-paso6 { background-color: #FFAB91; } /* Melocotón más oscuro */
+        .boton-paso6:hover { background-color: #FF8A65; } /* Melocotón aún más oscuro */
+        .boton-volver { opacity: 0.8; } /* Ligeramente más claro para diferenciar */
+        .boton-volver:hover { opacity: 1; } /* Volver a opacidad completa en hover */
+    </style>
+</head>
+<body>
+    <h1>¡Bienvenidos a tu primera clase con App Inventor!</h1>
+    <p>En este tutorial, aprenderás a usar App Inventor para crear una aplicación simple con un botón que muestra un mensaje o una imagen. ¡No necesitas saber programar! Haz clic en cada paso para verlo y usa los botones "Siguiente" o "Volver atrás" para navegar entre temas. Los GIFs te mostrarán exactamente qué hacer.</p>
+
+    <div class="paso paso1">
+        <div class="paso-titulo paso1-titulo" onclick="togglePaso('paso1-contenido')">Paso 1: Conoce la interfaz de App Inventor</div>
+        <div class="paso-contenido" id="paso1-contenido">
+            <div class="tema active" id="paso1-tema1">
+                <h2>El Diseñador</h2>
+                <p>Abre App Inventor en <a href="http://ai2.appinventor.mit.edu">ai2.appinventor.mit.edu</a> con tu cuenta de Google. El <strong>Diseñador</strong> es donde arrastras botones, imágenes y otros elementos para tu app.</p>
+                <img src="images/diseñador.gif" alt="GIF del Diseñador en App Inventor">
+                <p><i>GIF 1: El Diseñador, donde creas la apariencia de tu app.</i></p>
+                <button class="boton-paso1" onclick="showNextTema('paso1-tema1', 'paso1-tema2')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso1-tema2">
+                <h2>Los Bloques</h2>
+                <p>Los <strong>Bloques</strong> son donde programas lo que hace tu app, uniendo piezas como un rompecabezas. Haz clic en el botón "Blocks" para ver esta sección.</p>
+                <img src="images/bloques.gif" alt="GIF del editor de Bloques">
+                <p><i>GIF 2: El editor de Bloques, donde programas con rompecabezas.</i></p>
+                <button class="boton-paso1 boton-volver" onclick="showPreviousTema('paso1-tema2', 'paso1-tema1')">Volver atrás</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="paso paso2">
+        <div class="paso-titulo paso2-titulo" onclick="togglePaso('paso2-contenido')">Paso 2: Crea un nuevo proyecto</div>
+        <div class="paso-contenido" id="paso2-contenido">
+            <div class="tema active" id="paso2-tema1">
+                <p>Haz clic en <strong>Start new project</strong> y nombra tu proyecto, por ejemplo, "MiPrimeraApp".</p>
+                <img src="images/nuevo-proyecto.gif" alt="GIF del botón Start new project">
+                <p><i>GIF 3: Botón para crear un nuevo proyecto.</i></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="paso paso3">
+        <div class="paso-titulo paso3-titulo" onclick="togglePaso('paso3-contenido')">Paso 3: Agrega componentes al diseñador</div>
+        <div class="paso-contenido" id="paso3-contenido">
+            <div class="tema active" id="paso3-tema1">
+                <p>En el <strong>Diseñador</strong>, arrastra un <strong>Button</strong> desde la paleta de la izquierda (en "User Interface") hasta la pantalla de tu app.</p>
+                <img src="images/arrastrar-boton.gif" alt="GIF de arrastrar un botón al diseñador">
+                <p><i>GIF 4: Arrastrando un botón al área de diseño.</i></p>
+                <button class="boton-paso3" onclick="showNextTema('paso3-tema1', 'paso3-tema2')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso3-tema2">
+                <p>Cambia el texto del botón en las propiedades (a la derecha) a algo como "¡Tócame!".</p>
+                <img src="images/propiedades-boton.gif" alt="GIF de las propiedades del botón">
+                <p><i>GIF 5: Cambiando el texto del botón en las propiedades.</i></p>
+                <button class="boton-paso3 boton-volver" onclick="showPreviousTema('paso3-tema2', 'paso3-tema1')">Volver atrás</button>
+                <button class="boton-paso3" onclick="showNextTema('paso3-tema2', 'paso3-tema3')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso3-tema3">
+                <p>Para mostrar un mensaje más adelante, agrega un componente <strong>Notifier</strong>. En el <strong>Diseñador</strong>, arrastra <strong>Notifier</strong> desde la paleta de la izquierda (en "User Interface") al área de diseño. No aparecerá en la pantalla, pero es necesario para programar mensajes.</p>
+                <img src="images/agregar-notifier.gif" alt="GIF de arrastrar el componente Notifier">
+                <p><i>GIF 6: Agregando el componente Notifier al diseño.</i></p>
+                <button class="boton-paso3 boton-volver" onclick="showPreviousTema('paso3-tema3', 'paso3-tema2')">Volver atrás</button>
+                <button class="boton-paso3" onclick="showNextTema('paso3-tema3', 'paso3-tema4')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso3-tema4">
+                <p>Para mostrar una imagen más adelante, agrega un componente <strong>Image</strong>. En el <strong>Diseñador</strong>, sigue estos pasos:</p>
+                <ol>
+                    <li>Arrastra un componente <strong>Image</strong> desde la paleta de la izquierda (en "User Interface") al área de diseño. Aparecerá en la pantalla de tu app.</li>
+                    <li>En las propiedades de <strong>Image1</strong> (a la derecha), haz clic en el campo "Picture" y selecciona "Upload File".</li>
+                    <li>Sube una imagen desde tu computadora (por ejemplo, una foto en JPG o PNG).</li>
+                    <li>En las propiedades, desmarca la casilla <strong>Visible</strong> para que la imagen esté oculta al inicio.</li>
+                </ol>
+                <img src="images/agregar-imagen.gif" alt="GIF de agregar el componente Image y configurar propiedades">
+                <p><i>GIF 7: Agregando el componente Image y configurando sus propiedades.</i></p>
+                <button class="boton-paso3 boton-volver" onclick="showPreviousTema('paso3-tema4', 'paso3-tema3')">Volver atrás</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="paso paso4">
+        <div class="paso-titulo paso4-titulo" onclick="togglePaso('paso4-contenido')">Paso 4: Agrega una acción al botón con bloques</div>
+        <div class="paso-contenido" id="paso4-contenido">
+            <div class="tema active" id="paso4-tema1">
+                <p>Haz clic en <strong>Blocks</strong> en la parte superior derecha para ir al editor de bloques.</p>
+                <img src="images/boton-bloques.gif" alt="GIF del botón Blocks">
+                <p><i>GIF 8: Botón para cambiar al editor de bloques.</i></p>
+                <button class="boton-paso4" onclick="showNextTema('paso4-tema1', 'paso4-tema2')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso4-tema2">
+                <h2>Opción 1: Mostrar un mensaje</h2>
+                <p>En el editor de <strong>Blocks</strong>, sigue estos pasos para que el botón muestre un mensaje emergente:</p>
+                <ol>
+                    <li>En la paleta de la izquierda, haz clic en <strong>Button1</strong> (bajo "Screen1").</li>
+                    <li>Arrastra el bloque <strong>when Button1.Click do</strong> al área de trabajo (es un bloque amarillo de la categoría "Control").</li>
+                    <li>En la paleta, haz clic en la categoría <strong>Text</strong> (color rosado) y arrastra el bloque <strong>text string</strong> (un bloque rosado con comillas).</li>
+                    <li>Haz clic dentro del bloque <strong>text string</strong> y escribe "¡Hola, creaste tu primera app!".</li>
+                    <li>En la paleta, haz clic en <strong>Notifier1</strong> (bajo "Screen1") y arrastra el bloque <strong>call Notifier1.ShowAlert</strong> (un bloque morado).</li>
+                    <li>Conecta el bloque <strong>text string</strong> al espacio "message" del bloque <strong>call Notifier1.ShowAlert</strong> (encajará como un rompecabezas).</li>
+                    <li>Conecta el bloque <strong>call Notifier1.ShowAlert</strong> dentro del espacio "do" del bloque <strong>when Button1.Click</strong>.</li>
+                </ol>
+                <p>Esto hará que al tocar el botón en tu app, aparezca un mensaje emergente.</p>
+                <img src="images/bloques-mensaje.gif" alt="GIF de los bloques para mostrar un mensaje">
+                <p><i>GIF 9: Bloques para que el botón muestre un mensaje.</i></p>
+                <button class="boton-paso4 boton-volver" onclick="showPreviousTema('paso4-tema2', 'paso4-tema1')">Volver atrás</button>
+                <button class="boton-paso4" onclick="showNextTema('paso4-tema2', 'paso4-tema3')">Siguiente</button>
+            </div>
+            <div class="tema" id="paso4-tema3">
+                <h2>Opción 2: Mostrar una imagen</h2>
+                <p>Para mostrar la imagen que agregaste, en el editor de <strong>Blocks</strong>, sigue estos pasos. Nota: Si ya usaste el bloque <strong>when Button1.Click do</strong> en la Opción 1, reemplaza su contenido con estos bloques o crea un nuevo proyecto.</p>
+                <ol>
+                    <li>En la paleta, haz clic en <strong>Image1</strong> (bajo "Screen1") y arrastra el bloque <strong>set Image1.Visible to</strong> (un bloque morado).</li>
+                    <li>En la paleta, haz clic en la categoría <strong>Logic</strong> (color verde) y arrastra el bloque <strong>true</strong> (un bloque verde).</li>
+                    <li>Conecta el bloque <strong>true</strong> al espacio "to" del bloque <strong>set Image1.Visible to</strong>.</li>
+                    <li>Conecta el bloque <strong>set Image1.Visible to</strong> dentro del espacio "do" del bloque <strong>when Button1.Click</strong>.</li>
+                </ol>
+                <p>Esto hará que al tocar el botón, la imagen aparezca en la pantalla.</p>
+                <img src="images/bloques-imagen.gif" alt="GIF de los bloques para mostrar una imagen">
+                <p><i>GIF 10: Bloques para que el botón muestre una imagen.</i></p>
+                <button class="boton-paso4 boton-volver" onclick="showPreviousTema('paso4-tema3', 'paso4-tema2')">Volver atrás</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="paso paso5">
+        <div class="paso-titulo paso5-titulo" onclick="togglePaso('paso5-contenido')">Paso 5: Prueba tu app</div>
+        <div class="paso-contenido" id="paso5-contenido">
+            <div class="tema active" id="paso5-tema1">
+                <p>Abre la app <strong>MIT AI2 Companion</strong> en tu celular. Escanea el código QR que aparece en App Inventor (botón <strong>Connect > AI Companion</strong>).</p>
+                <img src="images/companion-qr.gif" alt="GIF del código QR para conectar">
+                <p><i>GIF 11: Conectando el celular con el código QR.</i></p>
+                <p>Toca el botón en tu app y verifica que aparezca el mensaje o la imagen.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="paso paso6">
+        <div class="paso-titulo paso6-titulo" onclick="togglePaso('paso6-contenido')">¡Felicidades!</div>
+        <div class="paso-contenido" id="paso6-contenido">
+            <div class="tema active" id="paso6-tema1">
+                <p>Has creado tu primera aplicación con App Inventor. ¿Qué tal si pruebas cambiar el mensaje o usar otra imagen? ¡Explora otros componentes en la paleta para hacer tu app más divertida!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const jsConfetti = new JSConfetti();
+        let confettiActive = false;
+
+        function togglePaso(pasoId) {
+            const contenido = document.getElementById(pasoId);
+            const isVisible = contenido.classList.contains('active');
+            // Cerrar todos los pasos
+            document.querySelectorAll('.paso-contenido').forEach(p => p.classList.remove('active'));
+            // Abrir el paso clicado si no estaba abierto
+            if (!isVisible) {
+                contenido.classList.add('active');
+                // Activar confeti para el Paso 6
+                if (pasoId === 'paso6-contenido' && !confettiActive) {
+                    confettiActive = true;
+                    jsConfetti.addConfetti({
+                        confettiColors: [
+                            '#B3E5FC', '#C8E6C9', '#F8BBD0', 
+                            '#FFF9C4', '#E1BEE7', '#FFCCBC'
+                        ],
+                        confettiRadius: 6,
+                        confettiNumber: 300,
+                        confettiSpeed: 10
+                    });
+                    // Detener confeti después de 5 segundos
+                    setTimeout(() => {
+                        jsConfetti.clearConfetti();
+                        confettiActive = false;
+                    }, 5000);
+                }
+            }
+        }
+
+        function showNextTema(currentId, nextId) {
+            document.getElementById(currentId).classList.remove('active');
+            document.getElementById(nextId).classList.add('active');
+        }
+
+        function showPreviousTema(currentId, previousId) {
+            document.getElementById(currentId).classList.remove('active');
+            document.getElementById(previousId).classList.add('active');
+        }
+    </script>
+</body>
+</html>
