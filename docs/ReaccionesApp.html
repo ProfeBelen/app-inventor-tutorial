@@ -1,0 +1,474 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clase 3: App de Reacciones del Personaje - Electivo de Programación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            background-color: #f0f4f8;
+        }
+        h1, .enunciado {
+            color: white;
+            background-color: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        h3 {
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        .accordion {
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            transition: 0.4s;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+        .accordion:hover {
+            filter: brightness(90%);
+        }
+        .accordion:after {
+            content: '+';
+            font-size: 20px;
+            float: right;
+            margin-left: 5px;
+        }
+        .accordion.active:after {
+            content: '−';
+        }
+        .panel {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.2s ease-out;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .panel.show {
+            max-height: 3000px;
+            padding: 18px;
+        }
+        .pastel-green { background-color: #a8e6cf; }
+        .pastel-purple { background-color: #d7b9d5; }
+        .pastel-orange { background-color: #ffd3b6; }
+        .pastel-red { background-color: #ffaaa5; }
+        .panel-green { background-color: #e8f7f1; }
+        .panel-purple { background-color: #f5eff5; }
+        .panel-orange { background-color: #fff6f0; }
+        .panel-red { background-color: #fff1f0; }
+        img, video {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .instruction-container {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .instruction-container span {
+            min-width: 200px;
+            flex: 1;
+        }
+        .instruction-container img {
+            max-width: 40%;
+            margin-left: 20px;
+        }
+        @media (min-width: 768px) {
+            .instruction-container {
+                flex-direction: row;
+                align-items: center;
+            }
+            .instruction-container img {
+                margin-left: 20px;
+                margin-bottom: 0;
+            }
+        }
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .nav-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+        .nav-buttons button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .button-green { background-color: #86b8a5; }
+        .button-purple { background-color: #ad94ac; }
+        .button-orange { background-color: #cca88f; }
+        .button-red { background-color: #cc8884; }
+        .step, .content-step {
+            display: none;
+        }
+        .step.active, .content-step.active {
+            display: block;
+        }
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clase 3: App de Reacciones del Personaje</h1>
+    <p class="enunciado">En esta clase, crearás una app que muestra un personaje que cambia su estado de ánimo (normal, feliz, aburrido, triste) al interactuar con diferentes acciones, como darle comida, hacer que estudie o darle una nota baja.</p>
+
+    <button class="accordion pastel-green active">Introducción</button>
+    <div class="panel show panel-green">
+        <p>En esta clase, desarrollarás una aplicación en App Inventor donde un personaje reacciona a tus acciones. Usa botones para darle comida (se pone feliz), hacerlo estudiar (se aburre), o darle una nota baja (se pone triste). Un contador registrará las acciones, y podrás reiniciar el estado. Aprenderás a usar imágenes, eventos, lógica condicional y sonidos.</p>
+        <video src="videos/reacciones_final.mp4" controls alt="Video de la app de reacciones funcionando"></video>
+        <div class="nav-buttons">
+            <button class="button-green" onclick="openAccordion('Contenidos Nuevos')">Contenidos</button>
+        </div>
+    </div>
+
+    <button class="accordion pastel-purple">Contenidos Nuevos</button>
+    <div class="panel panel-purple">
+        <div id="content-step1" class="content-step active">
+            <h3>Componente Imagen</h3>
+            <p>El componente Imagen permite mostrar imágenes en la pantalla. Lo encontrarás en la paleta "Interfaz de Usuario" del diseñador.</p>
+            <img src="images/image_component.png" alt="Componente Imagen en App Inventor">
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="openAccordion('Introducción')">Introducción</button>
+                <button class="button-purple" onclick="nextContentStep(2)">Siguiente</button>
+            </div>
+        </div>
+        <div id="content-step2" class="content-step">
+            <h3>Evento .Click</h3>
+            <p>El evento .Click se activa al presionar un botón. Está en la sección de bloques del componente Botón.</p>
+            <img src="images/click_event.png" alt="Evento .Click en App Inventor">
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="prevContentStep(1)">Anterior</button>
+                <button class="button-purple" onclick="nextContentStep(3)">Siguiente</button>
+            </div>
+        </div>
+        <div id="content-step3" class="content-step">
+            <h3>Lógica Condicional (si-entonces-else)</h3>
+            <p>El bloque si-entonces permite ejecutar diferentes acciones según una condición. Está en la categoría "Control" de los bloques.</p>
+            <img src="images/if_else_logic.png" alt="Bloque si-entonces-else en App Inventor">
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="prevContentStep(2)">Anterior</button>
+                <button class="button-purple" onclick="openAccordion('Actividad Práctica')">Ir a la actividad</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="accordion pastel-orange">Actividad Práctica</button>
+    <div class="panel panel-orange">
+        <div id="step1" class="step active">
+            <h3>Paso 1: Configuración del Diseñador</h3>
+            <ul>
+                <li class="instruction-container">
+                    <span>Abre App Inventor y crea un proyecto llamado <code>ReaccionesApp</code>.</span>
+                    <img src="images/crear_proyecto.png" alt="Crear proyecto ReaccionesApp en App Inventor">
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega cuatro botones desde la paleta "Interfaz de Usuario": <code>BotónComida</code> (texto: "Comida"), <code>BotónEstudiar</code> (texto: "Estudiar"), <code>BotónNota</code> (texto: "Nota Matemática"), y <code>BotónReiniciar</code> (texto: "Reiniciar").</span>
+                    <img src="images/agregar_botones.png" alt="Agregar botones en el diseñador">
+                </li>
+                <li class="instruction-container">
+                    <span>Sube a "Media" tus 4 fotos de personaje: <code>normal.jpg</code>, <code>feliz.jpg</code>, <code>aburrido.jpg</code>, <code>triste.jpg</code>, y los sonidos que elijas para cada cambio, por ejemplo yo subí: <code>neutro.mp3</code>, <code>risa.mp3</code>, <code>bostezo.mp3</code>, <code>llanto.mp3</code>.</span>
+                    <img src="images/subir_media.png" alt="Subir imágenes y sonidos a Media">
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega una Imagen desde el panel "Interfaz de usuario" (<code>Imagen1</code>) y configura su propiedad <code>Foto</code> a <code>normal.jpg</code>.</span>
+                    <img src="images/agregar_imagen.png" alt="Agregar componente Imagen y configurar foto">
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega una Etiqueta (<code>EtiquetaEstado</code>) con texto inicial "¡Estado normal! Acciones: 0".</span>
+                    <img src="images/agregar_etiqueta.png" alt="Agregar componente Etiqueta">
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega un componente Sonido (<code>Sonido1</code>) desde el menú "Medios" en el modo diseñador y configura su propiedad <code>Origen</code> a <code>neutro.mp3</code>.</span>
+                    <img src="images/agregar_sonido.png" alt="Agregar componente Sonido">
+                </li>
+                <li class="instruction-container">
+                    <span>Ajusta el diseño: centra los botones, la imagen y el label, y configura tamaños adecuados, para ello, agrega desde el panel "Disposición" un elemento <code>AbsoluteArrangement</code>, e introduce al interior los anteriores elementos (4 botones y la imagen, si quieres puedes insertar la etiqueta adentro igual).</span>
+                    <img src="images/diseno_absolute_arrangement.png" alt="Ajustar diseño con AbsoluteArrangement">
+                </li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="openAccordion('Contenidos Nuevos')">Contenidos Nuevos</button>
+                <button class="button-orange" onclick="nextStep(2)">Siguiente</button>
+            </div>
+        </div>
+        <div id="step2" class="step">
+            <h3>Paso 2: Programación de los Bloques</h3>
+            <ul>
+                <li class="instruction-container">
+                    <span>Ve a la vista de bloques y crea una variable: <code>contadorAcciones</code> (inicializar en 0).</span>
+                    <img src="images/crear_variables.png" alt="Crear variable contadorAcciones">
+                </li>
+                <li class="instruction-container">
+                    <span>Para <code>BotónComida.Click</code>:
+                        <ul>
+                            <li>Poner <code>Imagen1.Foto</code> como <code>feliz.jpg</code>.</li>
+                            <li>Poner <code>globalcontadorAcciones</code> a <code>globalcontadorAcciones + 1</code>.</li>
+                            <li>Poner <code>EtiquetaEstado.Texto</code> como --unir: "¡Mmm, qué rico! Acciones: " unido a tomar <code>globalcontadorAcciones</code>.</li>
+                            <li>Poner <code>Sonido1.Origen</code> como <code>risa.mp3</code> y llamar el <code>sonido1.reproducir</code>.</li>
+                        </ul>
+                    </span>
+                    <img src="images/bloque_comida.png" alt="Bloque para BotónComida.Click">
+                </li>
+                <li class="instruction-container">
+                    <span>Duplica el bloque de <code>BotónComida.Click</code> para los otros botones (<code>BotónEstudiar</code>, <code>BotónNota</code>, <code>BotónReiniciar</code>), debes duplicar un total de 3 veces, y cambia los elementos según el Ejemplo del GIF:
+                        <ul>
+                            <li>Para <code>BotónEstudiar.Click</code>:
+                                <ul>
+                                    <li>Cambiar <code>BotónComida</code> por <code>BotónEstudiar</code>.</li>
+                                    <li>Cambiar <code>feliz.jpg</code> por <code>aburrido.jpg</code>.</li>
+                                    <li>Cambiar "¡Mmm, qué rico! Acciones:" por "¡Qué aburrido! Acciones:".</li>
+                                    <li>Cambiar <code>risa.mp3</code> por <code>bostezo.mp3</code>.</li>
+                                </ul>
+                            </li>
+                            <li>Para <code>BotónNota.Click</code>:
+                                <ul>
+                                    <li>Cambiar <code>BotónComida</code> por <code>BotónNota</code>.</li>
+                                    <li>Cambiar <code>feliz.jpg</code> por <code>triste.jpg</code>.</li>
+                                    <li>Cambiar "¡Mmm, qué rico! Acciones:" por "¡Un 2.0, qué triste! Acciones:".</li>
+                                    <li>Cambiar <code>risa.mp3</code> por <code>llanto.mp3</code>.</li>
+                                </ul>
+                            </li>
+                            <li>Para <code>BotónReiniciar.Click</code>:
+                                <ul>
+                                    <li>Cambiar <code>BotónComida</code> por <code>BotónReiniciar</code>.</li>
+                                    <li>Cambiar <code>feliz.jpg</code> por <code>normal.jpg</code>.</li>
+                                    <li>Cambiar "¡Mmm, qué rico! Acciones:" por "¡Estado normal! Acciones: 0".</li>
+                                    <li>Cambiar <code>risa.mp3</code> por <code>neutro.mp3</code>.</li>
+                                    <li>Eliminar el bloque que incrementa <code>globalcontadorAcciones</code>.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </span>
+                    <img src="images/duplicar_bloques.gif" alt="Duplicar bloque BotónComida.Click y cambiar elementos">
+                </li>
+                <li class="instruction-container">
+                    <span>Tu código de bloques debería de verse algo así:</span>
+                    <img src="images/todos_los_bloques.png" alt="Todos los bloques de código completos">
+                </li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="prevStep(1)">Anterior</button>
+                <button class="button-orange" onclick="nextStep(3)">Siguiente</button>
+            </div>
+        </div>
+        <div id="step3" class="step">
+            <h3>Paso 3: Prueba de la App</h3>
+            <ul>
+                <li>Conecta un dispositivo o usa el emulador.</li>
+                <li>Presiona cada botón ("Comida", "Estudiar", "Nota Matemática") y verifica que la imagen, el mensaje y el sonido cambien correctamente.</li>
+                <li>Comprueba que el contador de acciones se actualice tras cada cambio.</li>
+                <li>Prueba el botón "Reiniciar" para asegurarte de que el estado vuelve a "normal" y el contador se reinicia.</li>
+                <li>Ajusta el diseño si es necesario (por ejemplo, tamaño de la imagen o posición de los botones).</li>
+                <li>Si tienes dudas de cómo se hacía, revisa este paso en la <a href="https://profebelen.github.io/app-inventor-tutorial/ContadorApp.html" target="_blank">clase 2</a>.</li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="prevStep(2)">Anterior</button>
+                <button class="button-orange" onclick="openAccordion('Felicitaciones')">Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="accordion pastel-red">Felicitaciones</button>
+    <div class="panel panel-red">
+        <p>Has completado la Clase 3 y creado una app que muestra las reacciones de un personaje a diferentes acciones. Descarga tu proyecto en formato <code>.aia</code> desde App Inventor y súbelo a Google Classroom para compartirlo conmigo. ¡Sigue explorando App Inventor!</p>
+        <canvas id="confetti-canvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        // Accordion functionality
+        var acc = document.getElementsByClassName("accordion");
+        for (var i = 0; i < acc.length; i++) {
+            acc[i].addEventListener("click", function() {
+                var panel = this.nextElementSibling;
+                var isActive = this.classList.contains("active");
+
+                // Close all panels
+                for (var j = 0; j < acc.length; j++) {
+                    acc[j].classList.remove("active");
+                    acc[j].nextElementSibling.classList.remove("show");
+                }
+
+                // Open clicked panel
+                if (!isActive) {
+                    this.classList.add("active");
+                    panel.classList.add("show");
+                    if (this.textContent === "Felicitaciones") {
+                        // Launch confetti 5 times
+                        let count = 0;
+                        const confettiInterval = setInterval(() => {
+                            confetti({
+                                particleCount: 100,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                            count++;
+                            if (count >= 5) clearInterval(confettiInterval);
+                        }, 500);
+
+                        // Launch balloons
+                        confetti({
+                            particleCount: 20,
+                            spread: 180,
+                            angle: 90,
+                            shapes: ['circle'],
+                            colors: ['#ff0000', '#0000ff', '#ffff00'],
+                            scalar: 2,
+                            gravity: -0.2,
+                            drift: 0,
+                            ticks: 600,
+                            origin: { y: 1.0 }
+                        });
+                    }
+                }
+            });
+        }
+
+        // Function to open specific accordion
+        function openAccordion(sectionName) {
+            for (var i = 0; i < acc.length; i++) {
+                acc[i].classList.remove("active");
+                acc[i].nextElementSibling.classList.remove("show");
+                if (acc[i].textContent === sectionName) {
+                    acc[i].classList.add("active");
+                    acc[i].nextElementSibling.classList.add("show");
+                    if (sectionName === "Felicitaciones") {
+                        // Launch confetti 5 times
+                        let count = 0;
+                        const confettiInterval = setInterval(() => {
+                            confetti({
+                                particleCount: 100,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                            count++;
+                            if (count >= 5) clearInterval(confettiInterval);
+                        }, 500);
+
+                        // Launch balloons
+                        confetti({
+                            particleCount: 20,
+                            spread: 180,
+                            angle: 90,
+                            shapes: ['circle'],
+                            colors: ['#ff0000', '#0000ff', '#ffff00'],
+                            scalar: 2,
+                            gravity: -0.2,
+                            drift: 0,
+                            ticks: 600,
+                            origin: { y: 1.0 }
+                        });
+                    }
+                }
+            }
+        }
+
+        // Step navigation for Actividad Práctica
+        function nextStep(stepNumber) {
+            var steps = document.getElementsByClassName("step");
+            for (var i = 0; i < steps.length; i++) {
+                steps[i].classList.remove("active");
+            }
+            document.getElementById("step" + stepNumber).classList.add("active");
+        }
+
+        function prevStep(stepNumber) {
+            var steps = document.getElementsByClassName("step");
+            for (var i = 0; i < steps.length; i++) {
+                steps[i].classList.remove("active");
+            }
+            document.getElementById("step" + stepNumber).classList.add("active");
+        }
+
+        // Content step navigation for Contenidos Nuevos
+        function nextContentStep(stepNumber) {
+            var contentSteps = document.getElementsByClassName("content-step");
+            for (var i = 0; i < contentSteps.length; i++) {
+                contentSteps[i].classList.remove("active");
+            }
+            document.getElementById("content-step" + stepNumber).classList.add("active");
+        }
+
+        function prevContentStep(stepNumber) {
+            var contentSteps = document.getElementsByClassName("content-step");
+            for (var i = 0; i < contentSteps.length; i++) {
+                contentSteps[i].classList.remove("active");
+            }
+            document.getElementById("content-step" + stepNumber).classList.add("active");
+        }
+
+        // Open first accordion by default
+        acc[0].classList.add("active");
+        acc[0].nextElementSibling.classList.add("show");
+    </script>
+</body>
+</html>
