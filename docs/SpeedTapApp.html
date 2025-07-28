@@ -1,0 +1,524 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clase 4: App de Reacción Rápida - Electivo de Programación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            background-color: #f0f4f8;
+        }
+        h1, .enunciado {
+            color: white;
+            background-color: #2c3e50;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        h3 {
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        .accordion {
+            color: white;
+            cursor: pointer;
+            padding: 18px;
+            width: 100%;
+            text-align: left;
+            border: none;
+            outline: none;
+            transition: 0.4s;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            border-radius: 5px;
+        }
+        .accordion:hover {
+            filter: brightness(90%);
+        }
+        .accordion:after {
+            content: '+';
+            font-size: 20px;
+            float: right;
+            margin-left: 5px;
+        }
+        .accordion.active:after {
+            content: '−';
+        }
+        .panel {
+            padding: 0 18px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        .panel.show {
+            max-height: none;
+            padding: 18px;
+        }
+        .pastel-green { background-color: #a8e6cf; }
+        .pastel-purple { background-color: #d7b9d5; }
+        .pastel-orange { 
+            background-color: #ffd3b6; 
+            overflow-y: auto; 
+            max-height: 600px;
+        }
+        .pastel-red { background-color: #ffaaa5; }
+        .panel-green { background-color: #e8f7f1; }
+        .panel-purple { background-color: #f5eff5; }
+        .panel-orange { background-color: #fff6f0; }
+        .panel-red { background-color: #fff1f0; }
+        img, video {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        img:hover {
+            border-color: #2c3e50;
+        }
+        .instruction-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .instruction-container span {
+            min-width: 200px;
+            flex: 1;
+        }
+        .instruction-container img {
+            max-width: 100%;
+            max-height: 300px;
+            margin: 10px 0;
+        }
+        @media (min-width: 768px) {
+            .instruction-container {
+                flex-direction: row;
+                align-items: center;
+            }
+            .instruction-container img {
+                max-width: 30%;
+                margin-left: 20px;
+                margin-bottom: 0;
+            }
+        }
+        .nav-buttons {
+            position: sticky;
+            bottom: 10px;
+            background-color: #fff6f0;
+            padding: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .nav-buttons button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+        .nav-buttons button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .button-green { background-color: #86b8a5; }
+        .button-purple { background-color: #ad94ac; }
+        .button-orange { background-color: #cca88f; }
+        .button-red { background-color: #cc8884; }
+        .step, .content-step {
+            display: none;
+        }
+        .step.active, .content-step.active {
+            display: block;
+        }
+        #confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0693;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .links-list {
+            margin: 10px 0;
+            padding: 10px;
+        }
+        .links-list ul {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            list-style: none;
+            padding: 0;
+        }
+        .links-list li a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .links-list li a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Clase 4: Juego de Reacción </h1>
+    <p class="enunciado">En esta clase, crearás una app inspirada en el juego Simon, donde un lienzo muestra una secuencia de cuatro colores (rojo, azul, verde, amarillo), y debes tocarlo en el orden correcto para ganar puntos. La app reproduce sonidos para aciertos y errores, cuenta los intentos, y permite reiniciar.</p>
+
+    <button class="accordion pastel-green active">Introducción</button>
+    <div class="panel show panel-green">
+        <p>Desarrollarás una aplicación en App Inventor llamada <strong>SpeedTapApp</strong>. Un lienzo mostrará una secuencia de cuatro colores (rojo, azul, verde, amarillo), y deberás tocarlo cuando aparezca cada color en el orden correcto. Ganarás puntos por aciertos, escucharás sonidos, y contarás los intentos. También aprenderás a diseñar una interfaz que se vea bien en cualquier celular, evitando problemas como botones superpuestos. Esta app será la base para la Clase 5, donde trabajarás sobre este mismo proyecto para añadir más funcionalidades.</strong></p>
+        <div class="links-list">
+            <h3>Enlaces Útiles</h3>
+            <ul>
+                <li><a href="http://appinventor.mit.edu/" target="_blank">App Inventor</a></li>
+                <li><a href="https://profebelen.github.io/app-inventor-tutorial/Clase1.html" target="_blank">Clase 1</a></li>
+                <li><a href="https://profebelen.github.io/app-inventor-tutorial/ContadorApp.html" target="_blank">Clase 2</a></li>
+                <li><a href="https://profebelen.github.io/app-inventor-tutorial/ReaccionesApp.html" target="_blank">Clase 3</a></li>
+            </ul>
+        </div>
+        <video src="videos/speedtap_final.mp4" controls alt="Video de la app de reacción rápida funcionando"></video>
+        <div class="nav-buttons">
+            <button class="button-green" onclick="openAccordion('Contenidos Nuevos')">Contenidos</button>
+        </div>
+    </div>
+
+    <button class="accordion pastel-purple">Contenidos Nuevos</button>
+    <div class="panel panel-purple">
+        <div id="content-step1" class="content-step active">
+            <h3>Componente Lienzo (Canvas)</h3>
+            <p>El componente Lienzo permite mostrar colores o dibujos dinámicos. Lo encontrarás en la paleta "Dibujo y Animación" del diseñador. Este lienzo cambiará colores de forma aleatoria entre: Rojo, Azul, Verde y Amarillo</p>
+            <a href="images/canvas_component.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                <img src="images/canvas_component.png" alt="Componente Lienzo en App Inventor">
+            </a>
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="openAccordion('Introducción')">Introducción</button>
+                <button class="button-purple" onclick="nextContentStep(2)">Siguiente</button>
+            </div>
+        </div>
+        <div id="content-step2" class="content-step">
+            <h3>Componente Reloj (Clock)</h3>
+            <p>El componente Reloj controla el tiempo y dispara eventos cada cierto intervalo. Está en la paleta "Sensores". Este componente es el que nos ayuda a manejar el tiempo que demora en cambiar los colores, por hoy, cambiará cada 1 segundo.</p>
+            <a href="images/clock_component.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                <img src="images/clock_component.png" alt="Componente Reloj en App Inventor">
+            </a>
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="prevContentStep(1)">Anterior</button>
+                <button class="button-purple" onclick="nextContentStep(3)">Siguiente</button>
+            </div>
+        </div>
+        <div id="content-step3" class="content-step">
+            <h3>Evento Lienzo.Tocado</h3>
+            <p>El evento <code>Lienzo.Tocado</code> detecta cuando el usuario toca el lienzo. Está en los bloques del componente Lienzo. Este bloque verifica si el color tocado es el correcto.</p>
+            <a href="images/canvas_touched_event.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                <img src="images/canvas_touched_event.png" alt="Evento Lienzo.Tocado en App Inventor">
+            </a>
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="prevContentStep(2)">Anterior</button>
+                <button class="button-purple" onclick="nextContentStep(4)">Siguiente</button>
+            </div>
+        </div>
+        <div id="content-step4" class="content-step">
+            <h3>Listas y Colores</h3>
+            <p>Las listas almacenan datos (como colores) y se usan para generar secuencias. Están en la categoría "Listas". Hoy usaremos una lista fija con los cuatro colores mencionados.</p>
+            <a href="images/list_and_color_blocks.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                <img src="images/list_and_color_blocks.png" alt="Bloques de listas y colores en App Inventor">
+            </a>
+            <div class="nav-buttons">
+                <button class="button-purple" onclick="prevContentStep(3)">Anterior</button>
+                <button class="button-purple" onclick="openAccordion('Actividad Práctica')">Ir a la actividad</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="accordion pastel-orange">Actividad Práctica</button>
+    <div class="panel panel-orange">
+        <div id="step1" class="step active">
+            <h3>Paso 1: Configuración del Diseñador</h3>
+            <ul>
+                <li class="instruction-container">
+                    <span>Abre App Inventor y crea un proyecto llamado <code>SpeedTapApp</code>.</span>
+                    
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega un <code>DisposiciónVertical</code> desde la paleta "Disposición" (<code>DisposiciónVertical1</code>). Configura: <ul><li><code>DispHorizontal</code>: Centro:3</li><li><code>DispVertical</code>: Centro:2</li><li><code>Alto</code>: Ajsutar al contenedor</li><li><code>Ancho</code>: Ajustar al contenedor</li></ul> Esto asegura que los componentes se adapten a cualquier pantalla, evitando superposiciones.</span>
+                    <a href="images/config_vertical_arrangement.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/config_vertical_arrangement.png" alt="Configurar VerticalArrangement">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Dentro de <code>VerticalArrangement1</code>, agrega: <ul><li>Una <code>Etiqueta</code> (<code>EtiquetaInstruccion</code>) con texto "Toca en el orden: rojo-azul. Puntos: 0". Configura <code>Width</code>: 80%.</li><li>Un <code>Lienzo</code> (<code>Lienzo1</code>) desde "Dibujo y Animación". Configura <code>Width</code>: 80%, <code>Height</code>: 50%, <code>BackgroundColor</code>: Gris.</li><li>Un <code>Botón</code> (<code>BotónReiniciar</code>) con texto "Reiniciar". Configura <code>Width</code>: 50%.</li></ul></span>
+                    <a href="images/agregar_componentes.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/agregar_componentes.png" alt="Agregar componentes en el diseñador">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega un componente <code>Reloj</code> (<code>Reloj1</code>) desde la paleta "Sensores". Configura <code>IntervaloTiempo</code>: 1000 (1 segundo).</span>
+                    <a href="images/agregar_reloj.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/agregar_reloj.png" alt="Agregar componente Reloj">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Sube a "Media" dos sonidos: <code>acierto.mp3</code> (para aciertos) y <code>error.mp3</code> (para errores). [Opcional: <a href="https://www.myinstants.com/es/index/cl/" target="_blank">Descarga los sonidos aquí</a>.]</span>
+                    <a href="images/subir_mediaclase4.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/subir_mediaclase4.png" alt="Subir sonidos a Media">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agrega un componente <code>Sonido</code> (<code>Sonido1</code>) desde "Medios". Configura <code>Origen</code>: <code>error.mp3</code>.</span>
+                    <a href="images/agregar_sonidoclase4.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/agregar_sonidoclase4.png" alt="Agregar componente Sonido">
+                    </a>
+                </li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="openAccordion('Contenidos Nuevos')">Contenidos Nuevos</button>
+                <button class="button-orange" onclick="nextStep(2)">Siguiente</button>
+            </div>
+        </div>
+        <div id="step2" class="step">
+            <h3>Paso 2: Programación de los Bloques</h3>
+            <ul>
+                <li class="instruction-container">
+                    <span>Agrega cinco Inicializar global "variable" como: <ul><li><code>secuenciaColores</code>: Agregar el elemento lista, construir una lista con "Rojo", "Azul", "Verde", "Amarillo" (en la tuerca puedes agregar más elementos a la lista).</li><li><code>puntos</code>: Inicializar en 0.</li><li><code>Pasos</code>: Inicializar en 1 (para seguir el orden).</li><li><code>Intentos</code>: Inicializar en 0.</li><li><code>ToquesCorrectos</code>: Inicializar en 0.</li></ul></span>
+                    <a href="images/crear_variablesclase4.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/crear_variablesclase4.png" alt="Crear variables en App Inventor">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agregar botón desde "Screen1": <code>cuando Screen1.Inicializar</code>: <ul><li>Poner <code>secuenciaColores</code> a: construir una lista: "Rojo", "Azul", "Verde", "Amarillo".</li><li>Poner <code>global puntos</code> a 0.</li><li>Poner <code>global Pasos</code> a 1.</li><li>Poner <code>global Intentos</code> a 0.</li><li>Poner <code>global ToquesCorrectos</code> a 0.</li><li>Poner <code>Lienzo1.ColorDeFondo</code> como "Gris".</li><li>Poner <code>Etiqueta1.Texto</code> como "Toca en el orden: ROJO - AZUL. Puntos: 0".</li></ul></span>
+                    <a href="images/bloque_inicializar.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/bloque_inicializar.png" alt="Bloque Pantalla1.Inicializar">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agregar botón desde "Reloj": <code>cuando Reloj1.Temporizador</code> ejecutar: <ul><li>Poner <code>Lienzo1.ColorDeFondo</code> como: seleccionar elemento de la lista / Indice : lista tomar <code>global_secuenciaColores</code> índice: (botón matemáticas) <code>entero aleatorio entre __ y __</code>. Poner entre 1 y 4. </li></ul></span>
+                    <a href="images/bloque_reloj.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/bloque_reloj.png" alt="Bloque Reloj1.Temporizador">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span>Agregar botón desde "Lienzo": <code>cuando Lienzo1.Tocado ejecutar</code>: <ul><li> <code>Poner global Intentos a </code>  <code>tomar global Intentos + 1</code>.</li><li> (Control) si/entonces/else: <ul><li> Si <code>Lienzo1.ColorDeFondo</code> =  <code>seleccionar elemento de la lista / índice </code> lista: <code>tomar secuenciaColores</code> índice <code>tomar global Pasos</code>: <li>Entonces  :  <code>poner global ToquesCorrectos a </code> | <code>tomar global ToquesCorrectos</code> + <code>1</code>.</li> <ul/><li> (Si/entonces/else) Si | <code>tomar global ToquesCorrectos</code> = 2 </li> <li> Entonces </li> <ul> <li> <code>poner global Puntos a </code> | <code>tomar global Puntos </code> + 1 <li>(Sonido) <code>Poner Sonido1.Origen como </code> | <code>acierto.mp3</code> <li>llamar <code> Sonido1.Reproducir</code>. <li>(variable) <code>poner global ToquesCorrectos a </code> 0 <li><code>poner global pasos a </code> 1 </li> </ul> <li/> De lo contrario: <ul><li> <code>Poner global Pasos a </code> | <code>tomar global Pasos</code> + 1 </li></ul></ul> <li> Else : <ul><li> <code>poner Sonido1.Origen como | error.mp3</code> <li> <code>llamar Sonido1.Reproducir </code> <li> <code>poner global ToquesCorrectos a </code> 0 <li> <code>poner global Pasos a </code> 1 </li></ul><li>Poner <code>Etiqueta1.Texto como</code> --unir(3): "Toca en el orden: ROJO - AZUL" | "Puntos:" | <code>tomar global Puntos</code>.</li></ul></span>
+                    <a href="images/bloque_lienzo_tocado.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/bloque_lienzo_tocado.png" alt="Bloque Lienzo1.Tocado">
+                    </a>
+                </li>
+                <li class="instruction-container">
+                    <span> Agregar botón desde "Botón" <code>cuando BotónReiniciar.Clic | ejecutar</code>: <ul><li> <code>poner global secuenciaColores a </code> construir una lista con "Rojo", "Azul", "Verde", "Amarillo".</li><li><code>poner global Puntos</code> a 0.</li><li> <code>Poner global Pasos</code> a 1.</li><li> <code>poner global Intentos</code> a 0.</li><li> <code>poner global ToquesCorrectos</code> a 0.</li><li> <code>poner Lienzo1.ColorDeFondo como </code> "Gris".</li><li> <code>poner Etiqueta1.Texto como </code> "Toca en el orden: ROJO - AZUL. Puntos: 0".</li></ul></span>
+                    <a href="images/bloque_reiniciarclase4.png" target="_blank" title="Abrir imagen en nueva pestaña para hacer zoom">
+                        <img src="images/bloque_reiniciarclase4.png" alt="Bloque BotónReiniciar.Click">
+                                    
+                    </a>
+                </li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="prevStep(1)">Anterior</button>
+                <button class="button-orange" onclick="nextStep(3)">Siguiente</button>
+            </div>
+        </div>
+        <div id="step3" class="step">
+            <h3>Paso 3: Prueba de la App</h3>
+            <ul>
+                <li>Conecta un dispositivo o usa el emulador. Para probar en tu teléfono Android, instala la app MIT AI2 Companion desde Google Play Store. En App Inventor, ve a "Conectar" > "AI Companion", escanea el código QR, y prueba la app en tiempo real.</li>
+                <li>Espera a que el lienzo muestre el color rojo, tócalo, luego espera al azul y tócalo. Verifica que los puntos aumenten y escuches <code>acierto.mp3</code>.</li>
+                <li>Toca un color incorrecto o fuera de orden y verifica que se reproduzca <code>error.mp3</code> sin sumar puntos.</li>
+                <li>Comprueba que el contador de intentos se actualice tras cada toque.</li>
+                <li>Prueba el botón "Reiniciar" para asegurarte de que los puntos y el lienzo vuelven al estado inicial.</li>
+                <li>Ajusta el diseño si los componentes se ven desalineados (por ejemplo, cambia el ancho del lienzo a 70% si es necesario).</li>
+                
+            </ul>
+            <div class="nav-buttons">
+                <button class="button-orange" onclick="prevStep(2)">Anterior</button>
+                <button class="button-orange" onclick="openAccordion('Felicitaciones')">Finalizar</button>
+            </div>
+        </div>
+    </div>
+
+    <button class="accordion pastel-red">Felicitaciones</button>
+    <div class="panel panel-red">
+        <p>¡Felicitaciones! Has completado la Clase 4 y creado <code>SpeedTapApp</code>, una app de reacción rápida inspirada en Simon. <strong>Guarda tu proyecto, ya que será la base para la Clase 5, donde lo extenderás con nuevas funcionalidades.</strong> Si terminaste, llama a la profesora para que evalúe tu trabajo directamente en el computador (en el emulador o revisando tus bloques). Si la app funciona en tu celular Android, ¡muéstrasela a la profesora para que la evalúe de inmediato! Asegúrate de que el lienzo cambie de color, los puntos se sumen, y los sonidos se reproduzcan correctamente.</p>
+        <p>Si no alcanzaste a terminar, descarga el archivo <code>.aia</code> desde "Proyectos" > "Exportar proyecto seleccionado (.aia) al computador" en App Inventor y súbelo a Google Classroom. Si tu trabajo ya fue evaluado por la profesora en clase, no necesitas enviar el <code>.aia</code>, pero asegúrate de marcar la tarea como "entregada" en Google Classroom.</p>
+        <p>Para probar o instalar la app en tu teléfono Android, instala la app MIT AI2 Companion desde Google Play Store, ve a "Conectar" > "AI Companion" en App Inventor, y escanea el código QR. Alternativamente, ve a "Construir" > "App (proveer QR code para .apk)", escanea el código QR, y habilita "Fuentes desconocidas" en tu teléfono para instalarla.</p>
+        <canvas id="confetti-canvas"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        // Accordion functionality
+        var acc = document.getElementsByClassName("accordion");
+        for (var i = 0; i < acc.length; i++) {
+            acc[i].addEventListener("click", function() {
+                var panel = this.nextElementSibling;
+                var isActive = this.classList.contains("active");
+
+                // Close all panels
+                for (var j = 0; j < acc.length; j++) {
+                    acc[j].classList.remove("active");
+                    acc[j].nextElementSibling.classList.remove("show");
+                }
+
+                // Toggle clicked panel
+                if (!isActive) {
+                    this.classList.add("active");
+                    panel.classList.add("show");
+                    if (this.textContent === "Felicitaciones") {
+                        // Launch confetti 5 times
+                        let count = 0;
+                        const confettiInterval = setInterval(() => {
+                            confetti({
+                                particleCount: 100,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                            count++;
+                            if (count >= 5) clearInterval(confettiInterval);
+                        }, 500);
+
+                        // Launch balloons
+                        confetti({
+                            particleCount: 20,
+                            spread: 180,
+                            angle: 90,
+                            shapes: ['circle'],
+                            colors: ['#ff0000', '#0000ff', '#ffff00'],
+                            scalar: 2,
+                            gravity: -0.2,
+                            drift: 0,
+                            ticks: 600,
+                            origin: { y: 1.0 }
+                        });
+                    }
+                }
+            });
+        }
+
+        // Function to open specific accordion
+        function openAccordion(sectionName) {
+            for (var i = 0; i < acc.length; i++) {
+                acc[i].classList.remove("active");
+                acc[i].nextElementSibling.classList.remove("show");
+                if (acc[i].textContent === sectionName) {
+                    acc[i].classList.add("active");
+                    acc[i].nextElementSibling.classList.add("show");
+                    if (sectionName === "Felicitaciones") {
+                        // Launch confetti 5 times
+                        let count = 0;
+                        const confettiInterval = setInterval(() => {
+                            confetti({
+                                particleCount: 100,
+                                spread: 70,
+                                origin: { y: 0.6 }
+                            });
+                            count++;
+                            if (count >= 5) clearInterval(confettiInterval);
+                        }, 500);
+
+                        // Launch balloons
+                        confetti({
+                            particleCount: 20,
+                            spread: 180,
+                            angle: 90,
+                            shapes: ['circle'],
+                            colors: ['#ff0000', '#0000ff', '#ffff00'],
+                            scalar: 2,
+                            gravity: -0.2,
+                            drift: 0,
+                            ticks: 600,
+                            origin: { y: 1.0 }
+                        });
+                    }
+                }
+            }
+        }
+
+        // Step navigation for Actividad Práctica
+        function nextStep(stepNumber) {
+            var steps = document.getElementsByClassName("step");
+            for (var i = 0; i < steps.length; i++) {
+                steps[i].classList.remove("active");
+            }
+            document.getElementById("step" + stepNumber).classList.add("active");
+        }
+
+        function prevStep(stepNumber) {
+            var steps = document.getElementsByClassName("step");
+            for (var i = 0; i < steps.length; i++) {
+                steps[i].classList.remove("active");
+            }
+            document.getElementById("step" + stepNumber).classList.add("active");
+        }
+
+        // Content step navigation for Contenidos Nuevos
+        function nextContentStep(stepNumber) {
+            var contentSteps = document.getElementsByClassName("content-step");
+            for (var i = 0; i < contentSteps.length; i++) {
+                contentSteps[i].classList.remove("active");
+            }
+            document.getElementById("content-step" + stepNumber).classList.add("active");
+        }
+
+        function prevContentStep(stepNumber) {
+            var contentSteps = document.getElementsByClassName("content-step");
+            for (var i = 0; i < contentSteps.length; i++) {
+                contentSteps[i].classList.remove("active");
+            }
+            document.getElementById("content-step" + stepNumber).classList.add("active");
+        }
+
+        // Open first accordion by default
+        acc[0].classList.add("active");
+        acc[0].nextElementSibling.classList.add("show");
+    </script>
+</body>
+</html>
